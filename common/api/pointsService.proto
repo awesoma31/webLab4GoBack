@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+import "api/model.proto";
+
+option go_package = "awesoma31/common/api";
+
+package api;
+
+service PointsService {
+  rpc GetUserPointsPage(PointsPageRequest) returns (PointsPage);
+}
+message PointsPageRequest {
+  string pageParam = 1;
+  int32 pageSize = 2;
+  int64 id = 3;
+}
+
+message PointsPage {
+  repeated Point content = 1;
+  int32 pageNumber = 2;
+  int32 pageSize = 3;
+  int64 totalElements = 4;
+  int32 totalPages = 5;
+}

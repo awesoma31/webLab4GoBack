@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+option go_package = "awesoma31/common/api";
+
+package api;
+
+message Point {
+  int64 id = 1;
+  double x = 2;
+  double y = 3;
+  double r = 4;
+  bool result = 5;
+}

@@ -1,0 +1,18 @@
+syntax="proto3";
+
+option go_package = "awesoma31/common/api";
+
+package api;
+
+service AuthService {
+  rpc Authorize(AuthorizeRequest) returns (Authorization);
+}
+
+message Authorization {
+  int64 id = 1;
+  string username = 2;
+}
+
+message AuthorizeRequest {
+  string token = 1;
+}
