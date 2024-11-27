@@ -16,7 +16,7 @@ var (
 
 func main() {
 	store := storage.NewStore()
-	_ = service.NewAuthService(store)
+	svc := service.NewAuthService(store)
 
 	grpcServer := grpc.NewServer()
 	l, err := net.Listen("tcp", grpcAddr)
@@ -26,7 +26,7 @@ func main() {
 	}
 	defer l.Close()
 
-	handler.NewGRPCAuthHandler(grpcServer)
+	handler.NewGRPCAuthHandler(grpcServer, svc)
 
 	log.Printf("Listening GRPC on: %s", grpcAddr)
 

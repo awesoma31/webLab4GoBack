@@ -3,25 +3,26 @@ package handler
 import (
 	pb "awesoma31/common/api"
 	"context"
+	"github.com/awesoma31/auth-service/service"
 	"google.golang.org/grpc"
-	"log"
 )
 
 type grpcAuthHandler struct {
 	pb.UnimplementedAuthServiceServer
+	authService service.AuthService
 }
 
-func NewGRPCAuthHandler(grpcServer *grpc.Server) {
-	handler := &grpcAuthHandler{}
+func NewGRPCAuthHandler(grpcServer *grpc.Server, svc service.AuthService) {
+	handler := &grpcAuthHandler{
+		authService: svc,
+	}
 	pb.RegisterAuthServiceServer(grpcServer, handler)
 }
 
-func (h *grpcAuthHandler) Authorize(context.Context, *pb.AuthorizeRequest) (*pb.Authorization, error) {
-	log.Println("Authorize request received")
-	//todo
-	o := &pb.Authorization{
-		Id:       1,
-		Username: "test_user",
+func (h *grpcAuthHandler) Authorize(ctx context.Context, r *pb.AuthorizeRequest) (*pb.Authorization, error) {
+	authorization, err := h.authService.Authorize(ctx, r)
+	if err != nil {
+		return nil, err
 	}
-	return o, nil
+	return authorization, nil
 }
