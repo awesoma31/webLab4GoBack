@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	_ "github.com/joho/godotenv/autoload"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -22,7 +25,31 @@ func WriteJson(w http.ResponseWriter, status int, payload any) {
 	w.WriteHeader(status)
 	err := json.NewEncoder(w).Encode(payload)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
+	}
+}
+
+func HandleAndWriteGrpcError(w http.ResponseWriter, err error) {
+	st, ok := status.FromError(err)
+	if ok {
+		log.Printf("gRPC error: %s", st.Message())
+
+		var statusCode int
+		switch st.Code() {
+		case codes.InvalidArgument:
+			statusCode = http.StatusBadRequest // 400
+		case codes.NotFound:
+			statusCode = http.StatusNotFound // 404
+		case codes.AlreadyExists:
+			statusCode = http.StatusConflict // 409
+		default:
+			statusCode = http.StatusInternalServerError // 500
+		}
+
+		WriteError(w, statusCode, st.Message())
+	} else {
+		log.Printf("Unexpected error: %v", err)
+		WriteError(w, http.StatusInternalServerError, "Internal server error")
 	}
 }
 

@@ -18,6 +18,8 @@ func NewHandler(asc pb.AuthServiceClient, psc pb.PointsServiceClient) *Handler {
 
 func (h *Handler) MountRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /test/auth", h.handleTest)
+	mux.HandleFunc("POST /test/reg", h.handleRegister)
+	mux.HandleFunc("POST /test/login", h.handleTestLogin)
 }
 
 func (h *Handler) handleTest(w http.ResponseWriter, r *http.Request) {
@@ -49,4 +51,50 @@ func (h *Handler) handleTest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	common.WriteJson(w, http.StatusOK, pointsPage)
+}
+
+func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
+	log.Println("TestReg")
+
+	var regReq pb.LoginRequest
+	err := common.ReadJSON(r, &regReq)
+	if err != nil {
+		common.WriteError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
+		return
+	}
+
+	_, err = h.authService.Register(r.Context(), &regReq)
+	if err != nil {
+		common.HandleAndWriteGrpcError(w, err)
+		return
+	}
+
+	log.Printf("User registered successfully: %s", regReq.Username)
+
+	common.WriteJson(w, http.StatusOK, map[string]string{
+		"message": "User registered successfully",
+	})
+}
+
+func (h *Handler) handleTestLogin(w http.ResponseWriter, r *http.Request) {
+	log.Println("Handle TestLogin")
+
+	var loginReq pb.LoginRequest
+	err := common.ReadJSON(r, &loginReq)
+	if err != nil {
+		common.WriteError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
+		return
+	}
+
+	loginResp, err := h.authService.Login(r.Context(), &loginReq)
+	if err != nil {
+		common.HandleAndWriteGrpcError(w, err)
+		return
+	}
+
+	log.Printf("User logged in successfully: %s", loginReq.Username)
+	common.WriteJson(w, http.StatusOK, map[string]interface{}{
+		"accessToken":  loginResp.AccessToken,
+		"refreshToken": loginResp.RefreshToken,
+	})
 }

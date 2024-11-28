@@ -1,6 +1,8 @@
 package service
 
 import (
+	"awesoma31/common/api"
+	"context"
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
@@ -14,35 +16,61 @@ type JwtUser struct {
 	RefreshToken string
 }
 
-type TokenService struct {
+type TokenService interface {
+	GenerateToken(id int64, username string) (string, error)
+	GenerateTokens(id int64, username string) (api.Tokens, error)
+	GenerateRefreshToken(id int64, username string) (string, error)
+	ParseToken(ctx context.Context, tokenString string) (*JwtUser, error)
+	ValidateToken(tokenString string) bool
+	GetUsernameFromToken(tokenString string) (string, error)
+	GetUserIDFromToken(tokenString string) (int64, error)
+}
+
+type tokenServiceImpl struct {
 	secretKey           []byte
 	jwtExpirationMs     time.Duration
 	refreshExpirationMs time.Duration
 }
 
-func NewTokenService(secretKey string, jwtExpirationMs, refreshExpirationMs time.Duration) *TokenService {
-	return &TokenService{
+func NewTokenService(secretKey string, jwtExpirationMs, refreshExpirationMs time.Duration) TokenService {
+	return &tokenServiceImpl{
 		secretKey:           []byte(secretKey),
 		jwtExpirationMs:     jwtExpirationMs,
 		refreshExpirationMs: refreshExpirationMs,
 	}
 }
 
-func (ts *TokenService) GenerateToken(id int64, username string) (string, error) {
+func (ts *tokenServiceImpl) GenerateTokens(id int64, username string) (api.Tokens, error) {
+	at, err := ts.GenerateToken(id, username)
+	if err != nil {
+		return api.Tokens{}, err
+	}
+	rt, err := ts.GenerateRefreshToken(id, username)
+	if err != nil {
+		return api.Tokens{}, err
+	}
+
+	return api.Tokens{
+		AccessToken:  at,
+		RefreshToken: rt,
+	}, nil
+}
+
+func (ts *tokenServiceImpl) GenerateToken(id int64, username string) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"id":       id,
 		"username": username,
 		"exp":      now.Add(ts.jwtExpirationMs).Unix(),
 		"iat":      now.Unix(),
-		"iss":      "your_app_name",
+		"iss":      "web-lab4",
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(ts.secretKey)
 }
 
-func (ts *TokenService) GenerateRefreshToken(id int64, username string) (string, error) {
+func (ts *tokenServiceImpl) GenerateRefreshToken(id int64, username string) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"id":       id,
@@ -58,7 +86,14 @@ func (ts *TokenService) GenerateRefreshToken(id int64, username string) (string,
 	return token.SignedString(ts.secretKey)
 }
 
-func (ts *TokenService) ParseToken(tokenString string) (*JwtUser, error) {
+func (ts *tokenServiceImpl) ParseToken(ctx context.Context, tokenString string) (*JwtUser, error) {
+	// Add logic to handle context cancellation if necessary
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -82,21 +117,27 @@ func (ts *TokenService) ParseToken(tokenString string) (*JwtUser, error) {
 	return nil, errors.New("invalid token")
 }
 
-func (ts *TokenService) ValidateToken(tokenString string) bool {
-	_, err := ts.ParseToken(tokenString)
+func (ts *tokenServiceImpl) ValidateToken(tokenString string) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	_, err := ts.ParseToken(ctx, tokenString)
 	return err == nil
 }
 
-func (ts *TokenService) GetUsernameFromToken(tokenString string) (string, error) {
-	user, err := ts.ParseToken(tokenString)
+func (ts *tokenServiceImpl) GetUsernameFromToken(tokenString string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	user, err := ts.ParseToken(ctx, tokenString)
 	if err != nil {
 		return "", err
 	}
 	return user.Username, nil
 }
 
-func (ts *TokenService) GetUserIDFromToken(tokenString string) (int64, error) {
-	user, err := ts.ParseToken(tokenString)
+func (ts *tokenServiceImpl) GetUserIDFromToken(tokenString string) (int64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	user, err := ts.ParseToken(ctx, tokenString)
 	if err != nil {
 		return 0, err
 	}

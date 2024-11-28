@@ -16,5 +16,6 @@ func NewStore() *Store {
 }
 
 func (s *Store) GetUserPointsPage(ctx context.Context) error {
+	//TODO implement me
 	return nil
 }

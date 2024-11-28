@@ -15,7 +15,7 @@ var (
 )
 
 func main() {
-	store := storage.NewStore()
+	store := storage.NewUserStore()
 	svc := service.NewAuthService(store)
 
 	grpcServer := grpc.NewServer()

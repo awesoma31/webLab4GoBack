@@ -16,7 +16,7 @@ var (
 
 func main() {
 	store := storage.NewStore()
-	_ = service.NewPointsPointsService(store)
+	pointsService := service.NewPointsService(store)
 
 	grpcServer := grpc.NewServer()
 	l, err := net.Listen("tcp", grpcAddr)
@@ -26,7 +26,7 @@ func main() {
 	}
 	defer l.Close()
 
-	handler.NewGRPCHandler(grpcServer)
+	handler.NewGRPCPointsHandler(grpcServer, pointsService)
 	log.Printf("Listening GRPC on: %s", grpcAddr)
 
 	if err = grpcServer.Serve(l); err != nil {
