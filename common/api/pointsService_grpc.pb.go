@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	PointsService_GetUserPointsPage_FullMethodName = "/api.PointsService/GetUserPointsPage"
+	PointsService_AddPoint_FullMethodName          = "/api.PointsService/AddPoint"
 )
 
 // PointsServiceClient is the client API for PointsService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type PointsServiceClient interface {
 	GetUserPointsPage(ctx context.Context, in *PointsPageRequest, opts ...grpc.CallOption) (*PointsPage, error)
+	AddPoint(ctx context.Context, in *AddPointRequest, opts ...grpc.CallOption) (*Point, error)
 }
 
 type pointsServiceClient struct {
@@ -47,11 +49,22 @@ func (c *pointsServiceClient) GetUserPointsPage(ctx context.Context, in *PointsP
 	return out, nil
 }
 
+func (c *pointsServiceClient) AddPoint(ctx context.Context, in *AddPointRequest, opts ...grpc.CallOption) (*Point, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Point)
+	err := c.cc.Invoke(ctx, PointsService_AddPoint_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // PointsServiceServer is the server API for PointsService service.
 // All implementations must embed UnimplementedPointsServiceServer
 // for forward compatibility.
 type PointsServiceServer interface {
 	GetUserPointsPage(context.Context, *PointsPageRequest) (*PointsPage, error)
+	AddPoint(context.Context, *AddPointRequest) (*Point, error)
 	mustEmbedUnimplementedPointsServiceServer()
 }
 
@@ -64,6 +77,9 @@ type UnimplementedPointsServiceServer struct{}
 
 func (UnimplementedPointsServiceServer) GetUserPointsPage(context.Context, *PointsPageRequest) (*PointsPage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUserPointsPage not implemented")
+}
+func (UnimplementedPointsServiceServer) AddPoint(context.Context, *AddPointRequest) (*Point, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddPoint not implemented")
 }
 func (UnimplementedPointsServiceServer) mustEmbedUnimplementedPointsServiceServer() {}
 func (UnimplementedPointsServiceServer) testEmbeddedByValue()                       {}
@@ -104,6 +120,24 @@ func _PointsService_GetUserPointsPage_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _PointsService_AddPoint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddPointRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(PointsServiceServer).AddPoint(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: PointsService_AddPoint_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(PointsServiceServer).AddPoint(ctx, req.(*AddPointRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // PointsService_ServiceDesc is the grpc.ServiceDesc for PointsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +148,10 @@ var PointsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserPointsPage",
 			Handler:    _PointsService_GetUserPointsPage_Handler,
+		},
+		{
+			MethodName: "AddPoint",
+			Handler:    _PointsService_AddPoint_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

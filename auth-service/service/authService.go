@@ -25,7 +25,7 @@ type service struct {
 func NewAuthService(store storage.UserStore) AuthService {
 	ts := NewTokenService(
 		"SUKABLYATSUKABLYATSUKABLYATSUKABLYATSUKABLYATSUKABLYATSUKABLYATSUKABLYATSUKABLYATSUKABLYATSUKABLYATSUKABLYAT",
-		15*time.Minute,
+		1500*time.Minute,
 		30*time.Hour,
 	)
 

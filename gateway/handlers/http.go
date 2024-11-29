@@ -19,9 +19,10 @@ func NewHandler(asc pb.AuthServiceClient, psc pb.PointsServiceClient) *Handler {
 
 func (h *Handler) MountRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /test/auth", h.handleTest)
-	mux.HandleFunc("POST /test/reg", h.handleRegister)
-	mux.HandleFunc("POST /test/login", h.handleLogin)
-	mux.HandleFunc("GET /test/points/page", h.handleGetPage)
+	mux.HandleFunc("POST /auth/reg", h.handleRegister)
+	mux.HandleFunc("POST /auth/login", h.handleLogin)
+	mux.HandleFunc("GET /points/page", h.handleGetPage)
+	mux.HandleFunc("GET /points/add", h.handleAddPoint)
 
 }
 
@@ -148,4 +149,44 @@ func (h *Handler) handleGetPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	common.WriteJson(w, http.StatusOK, pointsPage)
+}
+
+func (h *Handler) handleAddPoint(w http.ResponseWriter, r *http.Request) {
+	log.Println("Handle TestAddPoint")
+	t, err := common.ExtractBearerToken(r)
+	if err != nil {
+		common.WriteError(w, http.StatusUnauthorized, "token required")
+		return
+	}
+
+	authorization, err := h.authService.Authorize(r.Context(), &pb.AuthorizeRequest{Token: t})
+	if err != nil {
+		common.WriteError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	var pointData pb.PointData
+	err = common.ReadJSON(r, &pointData)
+	if err != nil {
+		common.WriteError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
+		return
+	}
+	pointResp, err := h.pointsService.AddPoint(r.Context(), &pb.AddPointRequest{
+		PointsData:    &pointData,
+		Authorization: authorization,
+	})
+	if err != nil {
+		common.WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	response := map[string]interface{}{
+		"id":      pointResp.Id,
+		"x":       pointResp.X,
+		"y":       pointResp.Y,
+		"r":       pointResp.R,
+		"result":  pointResp.Result,
+		"ownerId": authorization.Id,
+	}
+
+	common.WriteJson(w, http.StatusOK, response)
 }

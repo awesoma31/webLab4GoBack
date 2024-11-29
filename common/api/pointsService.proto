@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "api/model.proto";
+import "api/oms.proto";
 
 option go_package = "awesoma31/common/api";
 
@@ -8,12 +9,25 @@ package api;
 
 service PointsService {
   rpc GetUserPointsPage(PointsPageRequest) returns (PointsPage);
+  rpc AddPoint(AddPointRequest) returns (Point);
 }
 message PointsPageRequest {
   string pageParam = 1;
   int32 pageSize = 2;
   int64 id = 3;
 }
+
+message PointData {
+  double x = 1;
+  double y = 2;
+  double r = 3;
+}
+
+message AddPointRequest {
+  PointData pointsData = 1;
+  Authorization authorization = 2;
+}
+
 
 message PointsPage {
   repeated Point content = 1;

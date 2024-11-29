@@ -10,7 +10,7 @@ import (
 )
 
 type PointsService interface {
-	AddPoint(ctx context.Context, point *model.Point, id uint) (*model.Point, error)
+	AddPoint(ctx context.Context, point *api.PointData, id int64) (*model.Point, error)
 	GetPointsPageByID(ctx context.Context, pageParam string, size int32, id int64) (*api.PointsPage, error)
 	GetTotalPointsByID(ctx context.Context, id int64) (int, error)
 }
@@ -23,12 +23,20 @@ func NewPointsService(store storage.PointsStore) PointsService {
 	return &pointsService{store: store}
 }
 
-func (s *pointsService) AddPoint(ctx context.Context, point *model.Point, userId uint) (*model.Point, error) {
-	point.OwnerID = userId
+func (s *pointsService) AddPoint(ctx context.Context, pointData *api.PointData, id int64) (*model.Point, error) {
+	point := &model.Point{
+		X:       pointData.X,
+		Y:       pointData.Y,
+		R:       pointData.R,
+		Result:  getResult(pointData),
+		OwnerID: id,
+	}
+
 	savedPoint, err := s.store.Create(ctx, point)
 	if err != nil {
-		return nil, fmt.Errorf("failed to add point: %w", err)
+		return nil, fmt.Errorf("failed to add pointData: %w", err)
 	}
+
 	return savedPoint, nil
 }
 
@@ -64,7 +72,7 @@ func (s *pointsService) GetPointsPageByID(ctx context.Context, pageParam string,
 	var pbPoints []*api.Point
 	for _, p := range points {
 		pbPoints = append(pbPoints, &api.Point{
-			Id:     int64(p.ID),
+			Id:     p.ID,
 			X:      p.X,
 			Y:      p.Y,
 			R:      p.R,
@@ -106,4 +114,28 @@ func clamp(value, min, max int32) int32 {
 		return max
 	}
 	return value
+}
+
+func getResult(p *api.PointData) bool {
+	x := p.X
+	y := p.Y
+	r := p.R
+
+	if y > 0 && x < 0 {
+		return false
+	}
+	if y < 0 && x < 0 {
+		if (y*y + x*x) > (r/2)*(r/2) {
+			return false
+		}
+	}
+	if y > 0 && x > 0 {
+		if y > ((-1.0/2.0)*x + r/2) {
+			return false
+		}
+	}
+	if x > 0 && y < 0 {
+		return !(x > r) && !(y < -r/2)
+	}
+	return true
 }

@@ -28,3 +28,16 @@ func (h *grpcPointsHandler) GetUserPointsPage(ctx context.Context, r *pb.PointsP
 
 	return p, nil
 }
+
+func (h *grpcPointsHandler) AddPoint(ctx context.Context, r *pb.AddPointRequest) (*pb.Point, error) {
+	log.Println("add point request received")
+
+	p, err := h.ps.AddPoint(ctx, r.PointsData, r.Authorization.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	protoPoint := p.ToProto()
+
+	return protoPoint, nil
+}
