@@ -5,6 +5,7 @@ import (
 	pb "awesoma31/common/api"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type Handler struct {
@@ -19,7 +20,9 @@ func NewHandler(asc pb.AuthServiceClient, psc pb.PointsServiceClient) *Handler {
 func (h *Handler) MountRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /test/auth", h.handleTest)
 	mux.HandleFunc("POST /test/reg", h.handleRegister)
-	mux.HandleFunc("POST /test/login", h.handleTestLogin)
+	mux.HandleFunc("POST /test/login", h.handleLogin)
+	mux.HandleFunc("GET /test/points/page", h.handleGetPage)
+
 }
 
 func (h *Handler) handleTest(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +79,7 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) handleTestLogin(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	log.Println("Handle TestLogin")
 
 	var loginReq pb.LoginRequest
@@ -97,4 +100,52 @@ func (h *Handler) handleTestLogin(w http.ResponseWriter, r *http.Request) {
 		"accessToken":  loginResp.AccessToken,
 		"refreshToken": loginResp.RefreshToken,
 	})
+}
+
+func (h *Handler) handleGetPage(w http.ResponseWriter, r *http.Request) {
+	log.Println("Handle TestGetPage")
+	// Extract query parameters
+	queryParams := r.URL.Query()
+
+	page := queryParams.Get("page")
+	if page == "" {
+		page = "1" // Default to page 1 if not provided
+	}
+
+	pageSize := queryParams.Get("size")
+	if pageSize == "" {
+		pageSize = "10" // Default to size 10 if not provided
+	}
+
+	// Parse pageSize to int32
+	size64, err := strconv.ParseInt(pageSize, 10, 32)
+	if err != nil {
+		common.WriteError(w, http.StatusBadRequest, "Invalid page size: "+err.Error())
+		return
+	}
+	size32 := int32(size64)
+
+	t, err := common.ExtractBearerToken(r)
+	if err != nil {
+		common.WriteError(w, http.StatusUnauthorized, "token required")
+		return
+	}
+
+	authorization, err := h.authService.Authorize(r.Context(), &pb.AuthorizeRequest{Token: t})
+	if err != nil {
+		common.WriteError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	pointsPage, err := h.pointsService.GetUserPointsPage(r.Context(), &pb.PointsPageRequest{
+		PageParam: page,
+		PageSize:  size32,
+		Id:        authorization.Id,
+	})
+	if err != nil {
+		common.HandleAndWriteGrpcError(w, err)
+		return
+	}
+
+	common.WriteJson(w, http.StatusOK, pointsPage)
 }

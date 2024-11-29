@@ -10,22 +10,21 @@ import (
 
 type grpcPointsHandler struct {
 	pb.UnimplementedPointsServiceServer
-	pointsService *service.PointsService
+	ps service.PointsService
 }
 
-func NewGRPCPointsHandler(grpcServer *grpc.Server, ps *service.PointsService) {
-	handler := &grpcPointsHandler{pointsService: ps}
+func NewGRPCPointsHandler(grpcServer *grpc.Server, ps service.PointsService) {
+	handler := &grpcPointsHandler{ps: ps}
 	pb.RegisterPointsServiceServer(grpcServer, handler)
 }
 
-func (g *grpcPointsHandler) GetUserPointsPage(ctx context.Context, r *pb.PointsPageRequest) (*pb.PointsPage, error) {
+func (h *grpcPointsHandler) GetUserPointsPage(ctx context.Context, r *pb.PointsPageRequest) (*pb.PointsPage, error) {
 	log.Println("user point page request received")
-	pp := &pb.PointsPage{
-		Content:       make([]*pb.Point, 0),
-		PageNumber:    0,
-		PageSize:      0,
-		TotalElements: 0,
-		TotalPages:    0,
+
+	p, err := h.ps.GetPointsPageByID(ctx, r.GetPageParam(), r.PageSize, r.Id)
+	if err != nil {
+		return nil, err
 	}
-	return pp, nil
+
+	return p, nil
 }
