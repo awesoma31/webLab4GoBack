@@ -21,8 +21,8 @@ func (h *Handler) MountRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /test/auth", h.handleTest)
 	mux.HandleFunc("POST /auth/reg", h.handleRegister)
 	mux.HandleFunc("POST /auth/login", h.handleLogin)
-	mux.HandleFunc("GET /points/page", h.handleGetPage)
-	mux.HandleFunc("GET /points/add", h.handleAddPoint)
+	mux.HandleFunc("GET /api/v1/points/page", h.handleGetPage)
+	mux.HandleFunc("POST /api/v1/points/add", h.handleAddPoint)
 
 }
 
@@ -30,7 +30,6 @@ func (h *Handler) handleTest(w http.ResponseWriter, r *http.Request) {
 	log.Println("Handle Test")
 	t, err := common.ExtractBearerToken(r)
 	if err != nil {
-		//todo
 		common.WriteError(w, http.StatusUnauthorized, "token required")
 		return
 	}
@@ -166,11 +165,13 @@ func (h *Handler) handleAddPoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var pointData pb.PointData
+
 	err = common.ReadJSON(r, &pointData)
 	if err != nil {
 		common.WriteError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())
 		return
 	}
+
 	pointResp, err := h.pointsService.AddPoint(r.Context(), &pb.AddPointRequest{
 		PointsData:    &pointData,
 		Authorization: authorization,

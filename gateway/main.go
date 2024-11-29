@@ -4,6 +4,7 @@ import (
 	"awesoma31/common"
 	"awesoma31/common/api"
 	"awesoma31/gateway/handlers"
+	"awesoma31/gateway/middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"log"
@@ -44,9 +45,11 @@ func main() {
 	handler := handlers.NewHandler(authSvc, pointsSvc)
 	handler.MountRoutes(mux)
 
+	corsMux := middleware.CorsMiddleware(mux)
+
 	log.Printf("Listening on %s\n", app.httpAddr)
 
-	if err := http.ListenAndServe(app.httpAddr, mux); err != nil {
+	if err := http.ListenAndServe(app.httpAddr, corsMux); err != nil {
 		log.Fatal(err)
 	}
 }
