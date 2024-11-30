@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"awesoma31/common"
 	"awesoma31/common/storage/model"
 	"context"
 	"errors"
@@ -26,23 +25,76 @@ type userStoreImpl struct {
 	db *gorm.DB
 }
 
-func NewUserStore() UserStore {
-	host := common.GetEnv("DB_HOST", "localhost")
-	port := common.GetEnv("DB_PORT", "5432")
-	user := common.GetEnv("DB_USER", "awesoma")
-	password := common.GetEnv("DB_PASSWORD", "1")
-	dbname := common.GetEnv("DB_NAME", "lab4")
+type Config struct {
+	Host     string
+	Port     string
+	Username string
+	Password string
+	DBName   string
+}
 
+type ConfigOption func(*Config)
+
+func defaultConfig() *Config {
+	return &Config{
+		Host:     "localhost",
+		Port:     "5432",
+		Username: "awesoma",
+		Password: "1",
+		DBName:   "lab4",
+	}
+}
+
+func WithHost(host string) ConfigOption {
+	return func(c *Config) {
+		c.Host = host
+	}
+}
+
+func WithPort(port string) ConfigOption {
+	return func(c *Config) {
+		c.Port = port
+	}
+}
+
+func WithUsername(username string) ConfigOption {
+	return func(c *Config) {
+		c.Username = username
+	}
+}
+
+func WithPassword(password string) ConfigOption {
+	return func(c *Config) {
+		c.Password = password
+	}
+}
+
+func WithDBName(dbName string) ConfigOption {
+	return func(c *Config) {
+		c.DBName = dbName
+	}
+}
+
+func NewConfig(opts ...ConfigOption) *Config {
+	conf := defaultConfig()
+	for _, opt := range opts {
+		opt(conf)
+	}
+	return conf
+}
+
+func NewUserStore(opts ...ConfigOption) UserStore {
+	conf := NewConfig(opts...)
 	dsn := fmt.Sprintf(
-		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=UTC",
-		host, user, password, dbname, port,
+		"host=%s user=%s password=%s dbname=%s port=%s",
+		conf.Host, conf.Username, conf.Password, conf.DBName, conf.Port,
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		panic(fmt.Sprintf("Failed to connect to database: %v", err))
+		log.Fatalf("Failed to connect to database: %s", err)
 	}
-	log.Printf("Connected to database: %s:%s:%s\n", host, dbname, port)
+	log.Printf("Connected to database: %s:%s:%s\n", conf.Host, conf.DBName, conf.Port)
 
 	return &userStoreImpl{db}
 }

@@ -15,13 +15,25 @@ var (
 )
 
 func main() {
-	store := storage.NewStore()
+	host := common.GetEnv("DB_HOST", "localhost")
+	port := common.GetEnv("DB_PORT", "5432")
+	user := common.GetEnv("DB_USER", "awesoma")
+	password := common.GetEnv("DB_PASSWORD", "1")
+	dbname := common.GetEnv("DB_NAME", "lab4")
+
+	store := storage.NewStore(
+		storage.WithHost(host),
+		storage.WithPort(port),
+		storage.WithUsername(user),
+		storage.WithPassword(password),
+		storage.WithDBName(dbname),
+	)
+
 	pointsService := service.NewPointsService(store)
 
 	grpcServer := grpc.NewServer()
 	l, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
-
 		log.Fatal(err)
 	}
 	defer l.Close()

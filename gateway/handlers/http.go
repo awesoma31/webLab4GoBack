@@ -3,6 +3,7 @@ package handlers
 import (
 	"awesoma31/common"
 	pb "awesoma31/common/api"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 	"log"
 	"net/http"
 	"strconv"
@@ -24,8 +25,18 @@ func (h *Handler) MountRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/points/page", h.handleGetPage)
 	mux.HandleFunc("POST /api/v1/points/add", h.handleAddPoint)
 
+	mux.Handle("/swagger/", http.StripPrefix("/swagger", httpSwagger.WrapHandler))
+
 }
 
+// @Summary Test Authorization
+// @Description Test the authorization of a user using a token.
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Paginated points response"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Router /test/auth [get]
 func (h *Handler) handleTest(w http.ResponseWriter, r *http.Request) {
 	log.Println("Handle Test")
 	t, err := common.ExtractBearerToken(r)
@@ -56,6 +67,15 @@ func (h *Handler) handleTest(w http.ResponseWriter, r *http.Request) {
 	common.WriteJson(w, http.StatusOK, pointsPage)
 }
 
+// @Summary Register a User
+// @Description Register a new user with username and password.
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body any true "User credentials"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Router /auth/reg [post]
 func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	log.Println("TestReg")
 
@@ -79,6 +99,15 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary User Login
+// @Description Authenticate a user and return access and refresh tokens.
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body any true "User credentials"
+// @Success 200 {object} map[string]interface{} "Tokens"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Router /auth/login [post]
 func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	log.Println("Handle TestLogin")
 
@@ -102,22 +131,31 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// @Summary Get Points Page
+// @Description Retrieve a paginated list of points for the authenticated user.
+// @Tags Points
+// @Accept json
+// @Produce json
+// @Param page query string true "Page number"
+// @Param size query int true "Page size"
+// @Success 200 {object} map[string]interface{} "Paginated points response"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Router /api/v1/points/page [get]
 func (h *Handler) handleGetPage(w http.ResponseWriter, r *http.Request) {
 	log.Println("Handle TestGetPage")
-	// Extract query parameters
 	queryParams := r.URL.Query()
 
 	page := queryParams.Get("page")
 	if page == "" {
-		page = "1" // Default to page 1 if not provided
+		page = "1"
 	}
 
 	pageSize := queryParams.Get("size")
 	if pageSize == "" {
-		pageSize = "10" // Default to size 10 if not provided
+		pageSize = "10"
 	}
 
-	// Parse pageSize to int32
 	size64, err := strconv.ParseInt(pageSize, 10, 32)
 	if err != nil {
 		common.WriteError(w, http.StatusBadRequest, "Invalid page size: "+err.Error())
@@ -150,6 +188,16 @@ func (h *Handler) handleGetPage(w http.ResponseWriter, r *http.Request) {
 	common.WriteJson(w, http.StatusOK, pointsPage)
 }
 
+// @Summary Add a Point
+// @Description Add a new point for the authenticated user.
+// @Tags Points
+// @Accept json
+// @Produce json
+// @Param request body any true "Point data"
+// @Success 200 {object} map[string]interface{} "Point details"
+// @Failure 400 {object} map[string]string "Bad Request"
+// @Failure 401 {object} map[string]string "Unauthorized"
+// @Router /api/v1/points/add [post]
 func (h *Handler) handleAddPoint(w http.ResponseWriter, r *http.Request) {
 	log.Println("Handle TestAddPoint")
 	t, err := common.ExtractBearerToken(r)
@@ -165,7 +213,6 @@ func (h *Handler) handleAddPoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var pointData pb.PointData
-
 	err = common.ReadJSON(r, &pointData)
 	if err != nil {
 		common.WriteError(w, http.StatusBadRequest, "Invalid JSON: "+err.Error())

@@ -15,7 +15,19 @@ var (
 )
 
 func main() {
-	store := storage.NewUserStore()
+	host := common.GetEnv("DB_HOST", "localhost")
+	port := common.GetEnv("DB_PORT", "5432")
+	user := common.GetEnv("DB_USER", "awesoma")
+	password := common.GetEnv("DB_PASSWORD", "1")
+	dbname := common.GetEnv("DB_NAME", "lab4")
+
+	store := storage.NewUserStore(
+		storage.WithHost(host),
+		storage.WithPort(port),
+		storage.WithUsername(user),
+		storage.WithPassword(password),
+		storage.WithDBName(dbname),
+	)
 	svc := service.NewAuthService(store)
 
 	grpcServer := grpc.NewServer()
